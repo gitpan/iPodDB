@@ -15,7 +15,8 @@ This is the main window of the iPodDB application to which everything is attache
 =cut
 
 use base qw( Wx::Frame Class::Accessor );
-use Wx qw( wxOK wxBOTH );
+use Wx qw( wxOK wxBOTH wxDefaultPosition wxDefaultSize wxNO_FULL_REPAINT_ON_RESIZE wxCLIP_CHILDREN wxLC_REPORT wxLC_VRULES wxLC_HRULES );
+use Wx::Event qw( EVT_MENU );
 
 use strict;
 use warnings;
@@ -23,6 +24,7 @@ use warnings;
 use iPodDB::Preferences;
 use iPodDB::Database;
 use iPodDB::Playlist;
+use iPodDB::Songlist;
 use iPodDB::Menu;
 use iPodDB::Status;
 
@@ -38,7 +40,11 @@ An iPodDB::Database object
 
 =head2 playlist
 
-An iPodDB::Playlist object
+An iPodDB::Playlist object (listing of playlists)
+
+=head2 songlist
+
+An iPodDB::Playlist object (listing of songs in a given playlist)
 
 =head2 menu
 
@@ -50,9 +56,9 @@ An iPodDB::Status object
 
 =cut
 
-__PACKAGE__->mk_accessors( qw( preferences database playlist menu status ) );
+__PACKAGE__->mk_accessors( qw( splitter preferences database playlist songlist menu status ) );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 METHODS
 
@@ -70,12 +76,30 @@ sub new {
 
 	bless $self, $class;
 
+	# Load preferences and database
 	$self->preferences( iPodDB::Preferences->new );
-	$self->playlist( iPodDB::Playlist->new( $self ) );
+	$self->load_database;
+
+	# Add status and menu bars
 	$self->status( iPodDB::Status->new( $self ) );
 	$self->menu( iPodDB::Menu->new( $self ) );
 
-	$self->load_database;
+	# Create the split interface
+	$self->splitter( Wx::SplitterWindow->new( $self, -1, wxDefaultPosition, wxDefaultSize, wxNO_FULL_REPAINT_ON_RESIZE | wxCLIP_CHILDREN ) );
+
+	# Load song list
+	$self->songlist( iPodDB::Songlist->new( $self->splitter ) );
+
+	# Load playlist tree, link it to the songlist and populate it
+	$self->playlist( iPodDB::Playlist->new( $self->splitter, $self->songlist ) );
+	$self->playlist->populate( $self->database->playlists ) if $self->database;
+
+	# Add elements to split interface
+	$size = $self->GetSize;
+	$self->splitter->SplitVertically( $self->playlist, $self->songlist, int( $size->GetWidth * 0.15 ) );
+
+	# Select the first playlist to get things going
+	$self->playlist->select_root;
 
 	return $self;
 }
@@ -103,7 +127,6 @@ sub load_database {
 	}
 
 	$self->database( $database ) if $database;
-	$self->playlist->load_songs( $database );
 }
 
 =head1 AUTHOR

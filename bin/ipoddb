@@ -37,4 +37,4 @@ use Pod::Usage;
 
 pod2usage( { verbose => 1 } ) if @ARGV;
 
-iPodDB->new->MainLoop;
+iPodDB->new->run;

@@ -30,7 +30,7 @@ use constant SIZE  => 3;
 
 __PACKAGE__->mk_accessors( qw( parent ) );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 my @columns = qw( songs time size );
 
@@ -52,8 +52,22 @@ sub new {
 	bless $self, $class;
 
 	$self->parent( $parent );
+	$self->clear;
 
 	return $self;
+}
+
+=head2 clear( )
+
+Clears the status bar to 0 for each column.
+
+=cut
+
+sub clear {
+	my $self = shift;
+	$self->songs( 0 );
+	$self->time( 0 );
+	$self->size( 0 );
 }
 
 =head2 songs( [ $songs ] )
@@ -66,7 +80,7 @@ sub songs {
 	my $self  = shift;
 	my $songs = shift;
 
-	if( $songs ) {
+	if( defined $songs ) {
 		$self->parent->SetStatusText( "$songs songs", SONGS ) ;
 		$self->{ _SONGS } = $songs;
 	}
@@ -84,7 +98,7 @@ sub time {
 	my $self = shift;
 	my $time = shift;
 
-	if( $time ) {
+	if( defined $time ) {
 		$self->{ _TIME } = $time;
 
 		$time = $time / 1000 / 60 / 60;
@@ -106,7 +120,7 @@ sub size {
 	my $self = shift;
 	my $size = shift;
 
-	if( $size ) {
+	if( defined $size ) {
 		$self->{ _SIZE } = $size;
 
 		$size = $size / 1024 / 1024;

@@ -15,12 +15,11 @@ This is the Edit menu portion of the menu bar.
 =cut
 
 use base qw( Wx::Menu );
-use Wx::Event qw( EVT_MENU );
 
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 METHODS
 
@@ -39,7 +38,7 @@ sub new {
 	
 	$self->Append( my $pref_id = Wx::NewId, '&Preferences', 'Modify your preferences' );
 
-	EVT_MENU( $parent, $pref_id, \&on_preferences );
+	$parent->EVT_MENU( $pref_id, \&on_preferences );
 
 	return $self;
 }
@@ -49,7 +48,7 @@ sub new {
 =head2 on_preferences( )
 
 When the "Preferences" option is selected this event is triggered. It will popup
-the preferences dialog for the user to modify then attempt to re-load the database.
+the preferences dialog for the user to modify then attempt to load the new database.
 
 =cut
 
@@ -61,7 +60,13 @@ sub on_preferences {
 	$preferences->mountpoint( undef );
 	$self->load_database;
 
-	$preferences->mountpoint( $mountpoint ) unless defined $preferences->mountpoint;
+	if( defined $preferences->mountpoint ) {
+		$self->playlist->populate( $self->database->playlists ) if $self->database;
+		$self->playlist->select_root;
+	}
+	else {
+		$preferences->mountpoint( $mountpoint );
+	}
 }
 
 =head1 AUTHOR

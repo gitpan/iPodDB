@@ -17,18 +17,17 @@ when a user right-clicks a song.
 
 use base qw( Wx::Menu );
 use Wx qw( wxOK wxID_OK wxTheClipboard wxPD_CAN_ABORT wxPD_APP_MODAL wxYES_NO wxNO_DEFAULT wxICON_EXCLAMATION wxID_YES );
-use Wx::Event qw( EVT_MENU );
 use Wx::DND;
 
 use strict;
 use warnings;
 
-use iPodDB::Playlist qw( song_to_path );
+use iPodDB::Songlist qw( song_to_path );
 
 use File::Copy;
 use Path::Class;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 METHODS
 
@@ -48,13 +47,13 @@ sub new {
 	$self->Append( my $copyto_id = Wx::NewId, "&Copy To...\tCtrl-T", 'Copy files to a new location' );
 	$self->Append( my $copy_id   = Wx::NewId, "&Copy\tCtrl-C", 'Copy files to the clipboard' );
 
-	unless( $parent->playlist->GetSelectedItemCount ) {
+	unless( $parent->songlist and $parent->songlist->GetSelectedItemCount ) {
 		$self->Enable( $copyto_id, 0 );
 		$self->Enable( $copy_id, 0 );
 	}
 
-	EVT_MENU( $parent, $copyto_id, \&on_copyto );
-	EVT_MENU( $parent, $copy_id, \&on_copy );
+	$parent->EVT_MENU( $copyto_id, \&on_copyto );
+	$parent->EVT_MENU( $copy_id, \&on_copy );
 
 	return $self;
 }
@@ -71,10 +70,10 @@ to show them the progress of the copy operation.
 
 sub on_copyto {
 	my $self     = shift;
-	my $playlist = $self->playlist;
+	my $songlist = $self->songlist;
 	my $path     = dir( $self->preferences->mountpoint );
 
-	return unless $playlist->GetSelectedItemCount;
+	return unless $songlist->GetSelectedItemCount;
 
 	my $dialog = Wx::DirDialog->new( $self, 'Choose a destination directory' );
 
@@ -82,10 +81,10 @@ sub on_copyto {
 
 	my $dpath    = dir( $dialog->GetPath );
 	my $text     = "Copying files to $dpath:\n%s";
-	my $progress = Wx::ProgressDialog->new( 'Copying Files...', sprintf( $text, '' ), $playlist->GetSelectedItemCount, $self, wxPD_CAN_ABORT | wxPD_APP_MODAL );
+	my $progress = Wx::ProgressDialog->new( 'Copying Files...', sprintf( $text, '' ), $songlist->GetSelectedItemCount, $self, wxPD_CAN_ABORT | wxPD_APP_MODAL );
 
 	my $i = 0;
-	for my $song ( $playlist->as_songobject ) {
+	for my $song ( $songlist->as_songobject ) {
 		my $source      = song_to_path( $path, $song );
 		my $file        = $source->basename;
 		my $destination = $dpath->file( $file );
@@ -127,12 +126,12 @@ any folder they desire.
 
 sub on_copy {
 	my $self       = shift;
-	my $playlist   = $self->playlist;
+	my $songlist   = $self->songlist;
 	my $path       = dir( $self->preferences->mountpoint );
 
-	return unless $playlist->GetSelectedItemCount;
+	return unless $songlist->GetSelectedItemCount;
 
-	my $files      = $playlist->as_filedataobject;
+	my $files      = $songlist->as_filedataobject;
 
 	wxTheClipboard->Open;
 	wxTheClipboard->SetData( $files );

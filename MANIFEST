@@ -6,6 +6,7 @@ lib/iPodDB/MainWindow.pm
 lib/iPodDB/Menu.pm
 lib/iPodDB/Playlist.pm
 lib/iPodDB/Preferences.pm
+lib/iPodDB/Songlist.pm
 lib/iPodDB/Status.pm
 lib/iPodDB/Menu/Edit.pm
 lib/iPodDB/Menu/File.pm

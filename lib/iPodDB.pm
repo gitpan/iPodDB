@@ -8,7 +8,7 @@ iPodDB - iPod music database browser
 
 	use iPodDB;
 
-	iPodDB->new->MainLoop;
+	iPodDB->new->run;
 
 =head1 DESCRIPTION
 
@@ -24,10 +24,20 @@ use warnings;
 
 use iPodDB::MainWindow;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 our $APPNAME = 'iPod Database Browser';
 
 =head1 METHODS
+
+=head2 run( )
+
+This is just an alias for Wx's MainLoop().
+
+=cut
+
+sub run {
+	$_[ 0 ]->MainLoop;
+}
 
 =head2 OnInit( )
 
