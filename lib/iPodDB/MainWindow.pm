@@ -52,7 +52,7 @@ An iPodDB::Status object
 
 __PACKAGE__->mk_accessors( qw( preferences database playlist menu status ) );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 METHODS
 
@@ -64,7 +64,8 @@ This creates the main window and all of its sub components. It will also call th
 
 sub new {
 	my $class = shift;
-	my $self  = $class->SUPER::new( undef, -1, 'iPod Database Viewer', [ 0, 0 ], [ 480, 320 ] );
+	my $size  = Wx::GetDisplaySize;
+	my $self  = $class->SUPER::new( undef, -1, 'iPod Database Viewer', [ 0, 0 ], [ int( $size->GetWidth * 0.75 ), int( $size->GetHeight * 0.75 ) ] );
 	$self->Centre( wxBOTH );
 
 	bless $self, $class;

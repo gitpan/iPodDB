@@ -23,8 +23,9 @@ use warnings;
 use iPodDB::Playlist;
 use iPodDB::Menu::File;
 use iPodDB::Menu::Edit;
+use iPodDB::Menu::Help;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 METHODS
 
@@ -43,6 +44,7 @@ sub new {
 
 	$self->Append( iPodDB::Menu::File->new( $parent ), '&File' );
 	$self->Append( iPodDB::Menu::Edit->new( $parent ), '&Edit' );
+	$self->Append( iPodDB::Menu::Help->new( $parent ), '&Help' );
 
 	$parent->SetMenuBar( $self );
 

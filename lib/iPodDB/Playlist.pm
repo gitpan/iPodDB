@@ -17,20 +17,29 @@ the File menu when you right-click a row.
 
 =cut
 
-use base qw( Wx::ListCtrl );
+use base qw( Wx::ListCtrl Exporter );
 use Wx qw( wxLC_REPORT wxLC_VRULES wxLC_HRULES wxLIST_STATE_SELECTED wxLIST_NEXT_ALL );
-use Wx::Event qw( EVT_LIST_COL_CLICK EVT_LIST_ITEM_RIGHT_CLICK EVT_LIST_ITEM_SELECTED EVT_LIST_ITEM_DESELECTED );
+use Wx::Event qw( EVT_LIST_COL_CLICK EVT_LIST_ITEM_RIGHT_CLICK EVT_LIST_ITEM_SELECTED EVT_LIST_ITEM_DESELECTED EVT_LIST_BEGIN_DRAG );
+use Wx::DND;
 
 use strict;
 use warnings;
 
-use constant ARTIST  => 0;
-use constant ALBUM   => 1;
-use constant TITLE   => 2;
+use Path::Class;
 
-our $VERSION = '0.01';
+use constant ARTIST     => 0;
+use constant ALBUM      => 1;
+use constant TITLE      => 2;
 
-my @columns = qw( artist album title );
+use constant ASCENDING  => 0;
+use constant DESCENDING => 1;
+
+our $VERSION    = '0.02';
+
+our @EXPORT_OK  = qw( song_to_path );
+
+my @columns     = qw( artist album title );
+my @column_sort = ( ASCENDING ) x 3;
 
 =head1 METHODS
 
@@ -55,6 +64,7 @@ sub new {
 	EVT_LIST_ITEM_RIGHT_CLICK( $self, $self, \&on_row_right_click );
 	EVT_LIST_ITEM_SELECTED( $self, $self, \&on_select );
 	EVT_LIST_ITEM_DESELECTED( $self, $self, \&on_select );
+	EVT_LIST_BEGIN_DRAG( $parent, $self, \&on_drag );
 
 	$self->load_songs( $parent->database );
 
@@ -96,26 +106,121 @@ sub load_songs {
 	$status->time( $time );
 	$status->size( $filesize );
 	$self->SetColumnWidth( $_, -1 ) for 0..$#columns;
-	$self->SortItems( sub { return $self->cmp_songs( $columns[ ARTIST ], @_ ); } );
+	$self->SortItems( sub { return $self->cmp_songs( ARTIST, @_ ); } );
 }
+
+=head2 as_songobject( [ @items ] )
+
+This function returns an array of Mac::iPod::DB::Song objects based on a list of items.
+If no list is provided the currently selected items are used.
+
+=cut
+
+sub as_songobject {
+	my $self     = shift;
+	my @items    = @_;
+	my $database = $self->GetParent->database;
+	my $item     = -1;
+	my @songs;
+
+	unless( @items ) {
+		while( ( $item = $self->GetNextItem( $item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED ) ) != -1 ) {
+			push @items, $self->GetItemData( $item );
+		}
+	}
+
+	push @songs, $database->song( $_ ) for @items;
+
+	return @songs;
+}
+
+=head2 as_filedataobject( [ @items ] )
+
+Return a Wx::FileDataObject from a list of items suitable for sending to the clipboard
+or for processing in a drag and drop event. If no list is provided, the currently
+selected items are used.
+
+=cut
+
+sub as_filedataobject {
+	my $self  = shift;
+	my @items = @_;
+	my $path  = dir( $self->GetParent->preferences->mountpoint );
+	my $files = Wx::FileDataObject->new;
+	
+	for my $song ( $self->as_songobject( @items ) ) {
+		my $file = song_to_path( $path, $song );
+		$files->AddFile( $file->stringify );
+	}
+
+	return $files;
+}
+
+=head2 cmp_songs( $column, $a, $b )
+
+This is the sorting function.
+
+=cut
+
+sub cmp_songs {
+	my $self     = shift;
+	my $column   = shift;
+	my $a        = shift;
+	my $b        = shift;
+	my $field    = $columns[ $column ];
+	my $database = $self->GetParent->database;
+
+	return 0 unless $database;
+
+	if( $column_sort[ $column ] == DESCENDING ) {
+		my $temp = $a;
+		$a       = $b;
+		$b       = $temp;
+	}
+
+	return $database->song( $a )->$field cmp $database->song( $b )->$field;
+}
+
+=head2 song_to_path( $directory, $song )
+
+This utility function takes a directory (Path::Class object) and then the a song object. It then translates
+the stored path to a path relative to the $directory. This method is available for export.
+
+=cut
+
+sub song_to_path {
+	my $dir  = shift;
+	my @path = split( ':', shift->path );
+
+	for( 1..$#path ) {
+		$dir = $_ == $#path ? $dir->file( $path[ $_ ] ) : $dir->subdir( $path[ $_ ] );
+	}
+
+	return $dir;
+}
+
+=head1 EVENTS
 
 =head2 on_column_click( )
 
-This callback will sort the listing based on which column was clicked.
+This event will sort the listing based on which column was clicked. It will
+flip between ascending order and descending order on every click.
 
 =cut
 
 sub on_column_click {
 	my $self   = shift;
 	my $event  = shift;
-	my $column = $columns[ $event->GetColumn ];
+	my $column = $event->GetColumn;
+
+	$column_sort[ $column ] ^= 1;
 
 	$self->SortItems( sub { return $self->cmp_songs( $column, @_ ); } );
 }
 
-=head2 on_column_click( )
+=head2 on_row_right_click( )
 
-This callback will pop up the File menu as long as at least one song is selected.
+This event will pop up the File menu as long as at least one song is selected.
 
 =cut
 
@@ -129,9 +234,9 @@ sub on_row_right_click {
 	}
 }
 
-=head2 on_column_click( )
+=head2 on_select( )
 
-This callback enables or disables options on the File menu when items are selected
+This event enables or disables options on the File menu when items are selected
 or deselected.
 
 =cut
@@ -149,42 +254,19 @@ sub on_select {
 	}
 }
 
-=head2 selected_songs( )
+=head2 on_drag()
 
-This function returns an array of Mac::iPod::DB::Song objects based on the selected
-items.
-
-=cut
-
-sub selected_songs {
-	my $self     = shift;
-	my $database = $self->GetParent->database;
-	my $item     = -1;
-	my @songs;
-
-	while( ( $item = $self->GetNextItem( $item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED ) ) != -1 ) {
-		push @songs, $database->song( $self->GetItemData( $item ) );
-	}
-
-	return @songs;
-}
-
-=head2 cmp_songs( $column, $a, $b )
-
-This is the sorting function.
+This event allows a user to drag files to a destination.
 
 =cut
 
-sub cmp_songs {
-	my $self     = shift;
-	my $column   = shift;
-	my $a        = shift;
-	my $b        = shift;
-	my $database = $self->GetParent->database;
+sub on_drag {
+	my $self       = shift;
+	my $playlist   = $self->playlist;
 
-	return 0 unless $database;
+	return unless $playlist->GetSelectedItemCount;
 
-	return $database->song( $a )->$column cmp $database->song( $b )->$column;
+	Wx::DropSource->new( $playlist->as_filedataobject, $self )->DoDragDrop;
 }
 
 =head1 AUTHOR

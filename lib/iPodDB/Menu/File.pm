@@ -16,17 +16,19 @@ when a user right-clicks a song.
 =cut
 
 use base qw( Wx::Menu );
-use Wx qw( wxOK wxID_OK wxTheClipboard );
+use Wx qw( wxOK wxID_OK wxTheClipboard wxPD_CAN_ABORT wxPD_APP_MODAL wxYES_NO wxNO_DEFAULT wxICON_EXCLAMATION wxID_YES );
 use Wx::Event qw( EVT_MENU );
 use Wx::DND;
 
 use strict;
 use warnings;
 
+use iPodDB::Playlist qw( song_to_path );
+
 use File::Copy;
 use Path::Class;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 METHODS
 
@@ -43,8 +45,8 @@ sub new {
 
 	bless $self, $class;
 
-	$self->Append( my $copyto_id = Wx::NewId, "&Copy To...\tCtrl-T" );
-	$self->Append( my $copy_id   = Wx::NewId, "&Copy\tCtrl-C" );
+	$self->Append( my $copyto_id = Wx::NewId, "&Copy To...\tCtrl-T", 'Copy files to a new location' );
+	$self->Append( my $copy_id   = Wx::NewId, "&Copy\tCtrl-C", 'Copy files to the clipboard' );
 
 	unless( $parent->playlist->GetSelectedItemCount ) {
 		$self->Enable( $copyto_id, 0 );
@@ -57,9 +59,11 @@ sub new {
 	return $self;
 }
 
+=head1 EVENTS
+
 =head2 on_copyto( )
 
-When the "Copy To..." option is selected this callback is triggered. It will popup
+When the "Copy To..." option is selected this event is triggered. It will popup
 a dialog asking the user to select a destination directory, then a progress dialog
 to show them the progress of the copy operation.
 
@@ -77,29 +81,45 @@ sub on_copyto {
 	return unless $dialog->ShowModal == wxID_OK;
 
 	my $dpath    = dir( $dialog->GetPath );
-	my $progress = Wx::ProgressDialog->new( 'Copying Files...', 'Copying files to ' . $dialog->GetPath, $playlist->GetSelectedItemCount );
+	my $text     = "Copying files to $dpath:\n%s";
+	my $progress = Wx::ProgressDialog->new( 'Copying Files...', sprintf( $text, '' ), $playlist->GetSelectedItemCount, $self, wxPD_CAN_ABORT | wxPD_APP_MODAL );
 
 	my $i = 0;
-	for my $song ( $playlist->selected_songs ) {
-		my $source      = songpath_to_dir( $path, $song->path );
+	for my $song ( $playlist->as_songobject ) {
+		my $source      = song_to_path( $path, $song );
 		my $file        = $source->basename;
 		my $destination = $dpath->file( $file );
 
-		$progress->Update( $i++, 'Copying files to ' . $dpath . ":\n" . $file );
+		last unless $progress->Update( $i++, sprintf( $text, $file ) );
+
+		if( -e $destination ) {
+			next unless Wx::MessageDialog->new(
+				$self,
+				"This folder already contains a file named '$file'.\nWould you like to replace the existing file?",
+				'Confirm File Replace',
+				wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION
+			)->ShowModal == wxID_YES;
+
+			unless( unlink $destination ) {
+				Wx::MessageDialog->new( $self, "Cannot delete $destination!", 'Error', wxOK )->ShowModal;
+				next;
+			}
+		}
+
 
 		eval{ copy( $source, $destination ); };
 
 		if( $@ ) {
-			Wx::MessageDialog->new( $self, "Cannot copy file: $@", 'Error',	wxOK )->ShowModal;
+			Wx::MessageDialog->new( $self, "Cannot copy file: $@", 'Error', wxOK )->ShowModal;
 			last;
 		}
 	}
 	$progress->Destroy;
 }
 
-=head2 on_copyto( )
+=head2 on_copy( )
 
-When the "Copy" option is selected this callback is triggered. It simply copies the
+When the "Copy" option is selected this event is triggered. It simply copies the
 list of selected files to the clipboard. Thus, a user can do a paste operation in to
 any folder they desire.
 
@@ -112,34 +132,11 @@ sub on_copy {
 
 	return unless $playlist->GetSelectedItemCount;
 
-	my $files      = Wx::FileDataObject->new;
-
-	for my $song ( $playlist->selected_songs ) {
-		my $file = songpath_to_dir( $path, $song->path );
-		$files->AddFile( $file->stringify );
-	}
+	my $files      = $playlist->as_filedataobject;
 
 	wxTheClipboard->Open;
 	wxTheClipboard->SetData( $files );
 	wxTheClipboard->Close;
-}
-
-=head2 songpath_to_dir( $dir, $songpath )
-
-This utility function takes a directory (Path::Class object) and then the path of a song (as stored
-in the iPod database) and puts the two together.
-
-=cut
-
-sub songpath_to_dir {
-	my $dir  = shift;
-	my @path = split( ':', shift );
-
-	for( 1..$#path ) {
-		$dir = $_ == $#path ? $dir->file( $path[ $_ ] ) : $dir->subdir( $path[ $_ ] );
-	}
-
-	return $dir;
 }
 
 =head1 AUTHOR

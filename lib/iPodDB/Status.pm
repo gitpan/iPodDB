@@ -24,13 +24,13 @@ use base qw( Class::Accessor );
 use strict;
 use warnings;
 
-use constant SONGS => 0;
-use constant TIME  => 1;
-use constant SIZE  => 2;
+use constant SONGS => 1;
+use constant TIME  => 2;
+use constant SIZE  => 3;
 
 __PACKAGE__->mk_accessors( qw( parent ) );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 my @columns = qw( songs time size );
 
@@ -38,7 +38,7 @@ my @columns = qw( songs time size );
 
 =head2 new( $frame )
 
-Creates the status bar, with 3 columns.
+Creates the status bar, with 3 columns (and one other for help text).
 
 =cut
 
@@ -47,7 +47,7 @@ sub new {
 	my $parent = shift;
 	my $self   = {};
 
-	$parent->CreateStatusBar( scalar @columns );
+	$parent->CreateStatusBar( scalar @columns + 1 );
 
 	bless $self, $class;
 

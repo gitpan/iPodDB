@@ -20,7 +20,7 @@ use Wx::Event qw( EVT_MENU );
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 METHODS
 
@@ -37,16 +37,18 @@ sub new {
 
 	bless $self, $class;
 	
-	$self->Append( my $pref_id = Wx::NewId, '&Preferences' );
+	$self->Append( my $pref_id = Wx::NewId, '&Preferences', 'Modify your preferences' );
 
 	EVT_MENU( $parent, $pref_id, \&on_preferences );
 
 	return $self;
 }
 
+=head1 EVENTS
+
 =head2 on_preferences( )
 
-When the "Preferences" option is selected this callback is triggered. It will popup
+When the "Preferences" option is selected this event is triggered. It will popup
 the preferences dialog for the user to modify then attempt to re-load the database.
 
 =cut

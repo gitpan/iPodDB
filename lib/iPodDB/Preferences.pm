@@ -6,7 +6,7 @@ iPodDB::Preferences - Store and Retrieve preferences
 
 =head1 SYNOPSIS
 
-	iPodDB::Preferences->new;
+	my $preferences = iPodDB::Preferences->new;
 
 =head1 DESCRIPTION
 
@@ -38,7 +38,7 @@ The location of the database on the above mountpoint
 
 __PACKAGE__->mk_accessors( qw( mountpoint database ) );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 METHODS
 
@@ -140,9 +140,11 @@ sub get {
 	return $config->Read( $key );
 }
 
+=head1 EVENTS
+
 =head2 on_mountpoint( $value )
 
-This is a trigger called once the mountpoint is set. It will automatically
+This trigger is called once the mountpoint is set. It will automatically
 add the location of the iPod database on the mountpoint.
 
 =cut
