@@ -1,16 +1,53 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         iPodDB
-version:      0.03
-version_from: lib/iPodDB.pm
-installdirs:  site
+---
+name: iPodDB
+version: 0.04
+author:
+  - 'Brian Cassidy <bricas@cpan.org>'
+abstract: iPod music database browser
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
 requires:
-    Class::Accessor:               0
-    File::Copy:                    0
-    Mac::iPod::DB:                 0
-    Path::Class:                   0
-    Test::More:                    0
-    Wx:                            0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+  Class::Accessor: 0
+  File::Copy: 0
+  Mac::iPod::DB: 0
+  Path::Class: 0
+  Wx: 0
+provides:
+  iPodDB:
+    file: lib/iPodDB.pm
+    version: 0.04
+  iPodDB::Database:
+    file: lib/iPodDB/Database.pm
+    version: 0.01
+  iPodDB::MainWindow:
+    file: lib/iPodDB/MainWindow.pm
+    version: 0.03
+  iPodDB::Menu:
+    file: lib/iPodDB/Menu.pm
+    version: 0.02
+  iPodDB::Menu::Edit:
+    file: lib/iPodDB/Menu/Edit.pm
+    version: 0.03
+  iPodDB::Menu::File:
+    file: lib/iPodDB/Menu/File.pm
+    version: 0.03
+  iPodDB::Menu::Help:
+    file: lib/iPodDB/Menu/Help.pm
+    version: 0.02
+  iPodDB::Playlist:
+    file: lib/iPodDB/Playlist.pm
+    version: 0.03
+  iPodDB::Preferences:
+    file: lib/iPodDB/Preferences.pm
+    version: 0.02
+  iPodDB::Songlist:
+    file: lib/iPodDB/Songlist.pm
+    version: 0.02
+  iPodDB::Status:
+    file: lib/iPodDB/Status.pm
+    version: 0.03
+generated_by: Module::Build version 0.2807
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
